@@ -1,0 +1,16 @@
+{
+  "name": "review-lens",
+  "version": "1.0.0",
+  "description": "Trendyol fotoğraflı yorum tarayıcısı",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^4.18.2",
+    "playwright": "^1.42.1",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}
