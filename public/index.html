@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Lens</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { bg: '#080808', card: '#141414', accent: '#E8622C', accentHover: '#D05522', textMut: '#999999' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Fira Code', 'monospace'] }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-bg text-white font-sans overflow-hidden flex h-screen selection:bg-accent selection:text-white">
+
+    <!-- Sol Panel -->
+    <aside class="w-80 glass-panel border-r border-white/5 flex flex-col h-full z-20 flex-shrink-0 relative shadow-2xl">
+        <div class="p-6 border-b border-white/5 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-accent via-orange-400 to-amber-500 bg-clip-text text-transparent">Review Lens<span class="text-white text-xl">.</span></h1>
+                <p class="text-xs text-textMut mt-1 font-medium">Trendyol fotoğraflı yorum tarayıcısı.</p>
+            </div>
+            <button onclick="openInfoModal()" class="text-xs bg-white/5 hover:bg-accent/20 border border-white/10 hover:border-accent text-accent px-2.5 py-1.5 rounded-lg transition" title="Bilgilendirme">📢</button>
+        </div>
+
+        <div class="p-6 border-b border-white/5 space-y-4">
+            <div>
+                <input type="text" id="searchInput" placeholder="Örn: oyuncu klavyesi..." class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent transition text-white placeholder-zinc-600 shadow-inner">
+                <p class="text-[11px] text-textMut mt-1.5 ml-1">trendyol.com üzerinde arar ve resimli yorumları çeker.</p>
+            </div>
+            
+            <details class="text-xs text-gray-300 group">
+                <summary class="cursor-pointer text-textMut hover:text-white transition select-none flex items-center justify-between py-1">
+                    <span>Tarama Sınırları Ayarla</span>
+                    <span class="group-open:rotate-180 transition-transform">&#9662;</span>
+                </summary>
+                <div class="mt-3 space-y-2.5 bg-black/40 p-3.5 rounded-xl border border-white/5">
+                    <label class="flex justify-between items-center text-xs text-textMut">Aranacak Sayfa 
+                        <input type="number" id="maxSearchPages" value="20" class="w-16 bg-card border border-white/10 rounded-lg px-2 py-1 text-center text-white focus:border-accent outline-none"></label>
+                    <label class="flex justify-between items-center text-xs text-textMut">Maks Ürün 
+                        <input type="number" id="maxProducts" value="300" class="w-16 bg-card border border-white/10 rounded-lg px-2 py-1 text-center text-white focus:border-accent outline-none"></label>
+                    <label class="flex justify-between items-center text-xs text-textMut">Yorum Sayfası/Ürün 
+                        <input type="number" id="maxReviewPages" value="10" class="w-16 bg-card border border-white/10 rounded-lg px-2 py-1 text-center text-white focus:border-accent outline-none"></label>
+                    <label class="flex justify-between items-center text-xs text-textMut">Bekleme (sn) 
+                        <input type="number" id="delayBase" value="2" class="w-16 bg-card border border-white/10 rounded-lg px-2 py-1 text-center text-white focus:border-accent outline-none"></label>
+                </div>
+            </details>
+
+            <div class="flex gap-2 pt-1">
+                <button id="startBtn" class="flex-1 bg-gradient-to-r from-accent to-orange-600 hover:from-accentHover hover:to-orange-700 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-accent/20 active:scale-95">Başlat / Sürdür</button>
+                <button id="stopBtn" class="bg-white/5 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 border border-white/10 text-gray-300 py-3 px-4 rounded-xl text-sm transition disabled:opacity-40 disabled:hover:bg-white/5 disabled:hover:text-gray-300 disabled:hover:border-white/10 active:scale-95" disabled>Durdur</button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2">
+            <h2 class="text-[11px] font-bold text-textMut uppercase tracking-wider mb-3 px-2">Kütüphane</h2>
+            <div id="libraryList" class="space-y-2"></div>
+        </div>
+        
+        <div id="liveIndicator" class="p-4 border-t border-white/5 text-xs text-textMut flex items-center gap-2.5 hidden bg-black/20">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50"></span>
+            <span class="font-medium text-emerald-400">Canlı Bağlantı Aktif</span>
+        </div>
+    </aside>
+
+    <!-- Ana İçerik -->
+    <main class="flex-1 flex flex-col h-full relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/40 via-bg to-bg">
+        
+        <!-- Canlı Durum Kartı -->
+        <div id="statusCard" class="hidden absolute top-6 left-1/2 transform -translate-x-1/2 w-[720px] glass-panel glow-active rounded-2xl z-50 p-6 flex flex-col animate-fade-in">
+            <div class="flex justify-between items-start border-b border-white/10 pb-4 mb-4">
+                <div>
+                    <h3 id="statusQuery" class="font-bold text-lg text-white capitalize">Sorgu</h3>
+                    <p class="text-xs text-textMut font-mono mt-0.5">Geçen Süre: <span id="statusTime" class="text-white">0:00</span> | Ürün ID: <span id="statusId" class="text-accent">-</span></p>
+                </div>
+                <div class="bg-accent/10 text-accent border border-accent/20 px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-accent animate-ping"></span>
+                    Tarama Yapılıyor
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-4 gap-3 mb-5">
+                <div class="bg-black/40 border border-white/5 p-3.5 rounded-xl text-center"><p class="text-2xl font-extrabold font-mono text-accent" id="statPhotos">0</p><p class="text-[10px] font-bold text-textMut uppercase tracking-wider mt-1">Yeni Fotoğraf</p></div>
+                <div class="bg-black/40 border border-white/5 p-3.5 rounded-xl text-center"><p class="text-2xl font-extrabold font-mono text-white" id="statProducts">0</p><p class="text-[10px] font-bold text-textMut uppercase tracking-wider mt-1">Ürün Taranan</p></div>
+                <div class="bg-black/40 border border-white/5 p-3.5 rounded-xl text-center"><p class="text-2xl font-extrabold font-mono text-white" id="statSearchPages">0</p><p class="text-[10px] font-bold text-textMut uppercase tracking-wider mt-1">Arama Syf.</p></div>
+                <div class="bg-black/40 border border-white/5 p-3.5 rounded-xl text-center"><p class="text-2xl font-extrabold font-mono text-red-400" id="statSkipped">0</p><p class="text-[10px] font-bold text-textMut uppercase tracking-wider mt-1">Atlanan</p></div>
+            </div>
+
+            <div class="overflow-hidden mb-4 py-1">
+                <div id="photoTicker" class="flex gap-2.5 w-max transition-transform duration-500"></div>
+            </div>
+
+            <details class="text-xs text-textMut">
+                <summary class="cursor-pointer hover:text-white transition font-medium">Çalıştırma Günlüğünü Göster</summary>
+                <div id="logBox" class="mt-2.5 bg-black/60 p-3 h-28 overflow-y-auto font-mono text-[11px] rounded-xl border border-white/5 flex flex-col gap-1.5 custom-scrollbar text-zinc-300"></div>
+            </details>
+        </div>
+
+        <!-- Galeri Alanı -->
+        <div class="flex-1 overflow-y-auto p-10 custom-scrollbar">
+            <div id="galleryHeader" class="mb-8 hidden">
+                <h1 id="galleryTitle" class="text-3xl font-extrabold text-white capitalize mb-1 tracking-tight"></h1>
+                <p id="galleryStats" class="text-textMut text-sm mb-6 font-medium"></p>
+                
+                <div class="flex gap-4 items-center glass-panel p-3.5 rounded-2xl border border-white/5">
+                    <input type="text" id="filterInput" placeholder="Marka veya yorumda anında ara..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition text-white placeholder-zinc-600">
+                    <select id="sortSelect" class="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent text-white transition cursor-pointer">
+                        <option value="most_photos">En Çok Fotoğraf</option>
+                        <option value="rating_high">En Yüksek Puan</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="galleryGrid" class="flex flex-col gap-8"></div>
+            
+            <div id="emptyState" class="h-full flex flex-col items-center justify-center text-textMut mt-20">
+                <div class="w-20 h-20 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-center mb-4 text-zinc-600 shadow-2xl">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <p class="text-sm font-medium text-zinc-400">Başlamak için sol panelden arama yapın veya kütüphaneden bir sorgu seçin.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- BİLGİLENDİRME MODALI -->
+    <div id="infoModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-lg p-8 rounded-3xl border border-white/10 shadow-2xl space-y-6 relative">
+            <button onclick="closeInfoModal()" class="absolute top-6 right-6 text-zinc-400 hover:text-white">&times;</button>
+            <div class="space-y-3">
+                <h2 class="text-xl font-bold bg-gradient-to-r from-accent to-orange-400 bg-clip-text text-transparent">📢 Bilgilendirme Kanalı</h2>
+                <div class="bg-black/55 p-4 rounded-xl border border-white/5 space-y-3 text-sm text-zinc-300">
+                    <p class="font-medium text-white">Kullandığınız için teşekkür ederiz, her şey aramızda :)</p>
+                    <p class="text-xs text-textMut leading-relaxed">Review Lens sürümü kararlı ve sorunsuz çalışacak şekilde yapılandırılmıştır.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <button id="lbClose" class="absolute top-6 right-6 text-zinc-400 hover:text-white p-3 rounded-full bg-white/5 hover:bg-white/10 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <div class="flex max-w-6xl w-full h-[82vh] glass-panel rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative">
+            <div class="w-2/3 bg-black/60 flex items-center justify-center relative group p-4">
+                <img id="lbImg" src="" class="max-h-full max-w-full object-contain rounded-xl">
+                <button id="lbPrev" class="absolute left-6 w-12 h-12 bg-black/60 hover:bg-accent border border-white/10 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition shadow-xl">&larr;</button>
+                <button id="lbNext" class="absolute right-6 w-12 h-12 bg-black/60 hover:bg-accent border border-white/10 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition shadow-xl">&rarr;</button>
+            </div>
+            <div class="w-1/3 p-8 flex flex-col overflow-y-auto custom-scrollbar bg-card/40">
+                <div class="flex items-center gap-3 mb-5">
+                    <span id="lbRating" class="bg-accent text-white px-3 py-1 rounded-lg text-xs font-bold shadow-lg shadow-accent/30">5.0</span>
+                    <span id="lbDate" class="text-textMut text-xs font-medium"></span>
+                </div>
+                <p id="lbText" class="text-zinc-200 text-sm leading-relaxed mb-6 flex-1 font-normal"></p>
+                <div class="border-t border-white/10 pt-5 mt-auto">
+                    <p id="lbBrand" class="text-accent text-xs font-bold uppercase tracking-wider"></p>
+                    <p id="lbProduct" class="text-sm font-semibold text-white mt-1 mb-5 line-clamp-2"></p>
+                    <a id="lbLink" href="#" target="_blank" class="block text-center bg-white/5 hover:bg-accent border border-white/10 hover:border-accent text-white text-xs font-semibold py-3 rounded-xl transition shadow-lg">Trendyol'da Ürünü Gör &nearr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openInfoModal() { document.getElementById('infoModal').classList.remove('hidden'); }
+        function closeInfoModal() { document.getElementById('infoModal').classList.add('hidden'); }
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
